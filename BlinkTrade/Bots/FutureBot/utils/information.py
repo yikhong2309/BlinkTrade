@@ -2,12 +2,11 @@ import pandas as pd
 import numpy as np
 import time
 import sys
-sys.path.append('/home/ec2-user/HengTrader')
+sys.path.append('/home/ec2-user/BlinkTrade')
 
-
-from Bots.FutureBot.utils.data_utils import get_decimal_precision, seperate_symbol_info_from_dict, convert_df_type
+from BlinkTrade.Bots.FutureBot.utils.data_utils import get_decimal_precision, seperate_symbol_info_from_dict, convert_df_type
 from binance.um_futures import UMFutures
-from Bots.FutureBot.privateconfig import g_api_key, g_secret_key
+from BlinkTrade.Bots.FutureBot.privateconfig import g_api_key, g_secret_key
 
 
 class Info_Controller():

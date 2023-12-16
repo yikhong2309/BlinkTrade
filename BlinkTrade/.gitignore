@@ -1,0 +1,22 @@
+### Venv ###
+venv/
+
+### Build File ###
+.idea/
+build/
+dist/
+
+### Data ###
+Research/data/
+
+### Research ### 
+
+### Python ###
+__pycache__
+*.pyc
+privateconfig.py
+Bots/SpotBot/privateconfig.py
+
+### Other ###
+.DS_Store
+README.md

@@ -2,8 +2,8 @@ import logging
 from binance.error import ClientError
 from binance.spot import Spot as SpotClient
 from binance.um_futures import UMFutures
-from Bots.FutureBot.privateconfig import g_api_key, g_secret_key
-from Bots.FutureBot.utils.information import Info_Controller
+from BlinkTrade.Bots.FutureBot.privateconfig import g_api_key, g_secret_key
+from BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
 
 class Order_Structure(object):
     '''Order的结构体'''

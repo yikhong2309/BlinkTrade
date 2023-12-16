@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 import logging
 import time
+from pandas_ta.core import ohlc4
+
 import sys
 sys.path.append("..")
-from Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
-from Bots.FutureBot.strategies.strategy_utils import np_round_floor
-from Bots.FutureBot.utils.trade_utils import Order_Structure
-from Bots.FutureBot.utils.information import Info_Controller
+from BlinkTrade.Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
+from BlinkTrade.Bots.FutureBot.strategies.strategy_utils import np_round_floor
+from BlinkTrade.Bots.FutureBot.utils.trade_utils import Order_Structure
+from BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
 
 
 class StrategyInterface(object):
@@ -27,7 +29,7 @@ class Strategy_mean_reversion(StrategyInterface):
     def __init__(self):
         super().__init__()
         self.reverse_detector = Reverse_Detector(
-            model_save_path='/home/ec2-user/HengTrader/Bots/FutureBot/models/',
+            model_save_path='/home/ec2-user/BlinkTrade/BlinkTrade/Bots/FutureBot/models/',
             model_name='rf_3class_70_30.pkl'
         )
         self.features_calculator = Features_Calculator()
@@ -35,15 +37,13 @@ class Strategy_mean_reversion(StrategyInterface):
 
     def get_theta(self, data_df):
         Boll_df = pd.DataFrame(index=data_df.index)
-        # todo 修改计算方法 ohlc4_Z
-        Boll_df['mean_20'] = data_df[['close']].ewm(span=20, adjust=False).mean()
-        Boll_df['std_20'] = data_df[['close']].ewm(span=96, adjust=False).std()
-        Boll_df['close'] = data_df['close']
-
+        Boll_df['ohlc4'] = ohlc4(data_df['open'], data_df['high'], data_df['low'], data_df['close'])
+        Boll_df['mean_20'] = Boll_df[['ohlc4']].ewm(span=20, adjust=False).mean()
+        Boll_df['std_20'] = Boll_df[['ohlc4']].ewm(span=96, adjust=False).std()
         Boll_df.dropna(inplace=True)
 
         # 计算偏离度 theta = (p - ma) / sigma
-        Boll_df['theta'] = (Boll_df['close'] - Boll_df['mean_20']) / Boll_df['std_20']
+        Boll_df['theta'] = (Boll_df['ohlc4'] - Boll_df['mean_20']) / Boll_df['std_20']
         return Boll_df['theta'].values[-1]
 
 
@@ -262,9 +262,9 @@ class Strategy_mean_reversion(StrategyInterface):
         logging.info('---------------------------------------------------------')
 
         # todo 调整合适的阈值，观察是否会有二者同时开仓的情况
-        if y_rise_prob > 0.4392:
+        if y_rise_prob > 0.4165:
             return 'BUY'
-        elif y_fall_prob > 0.4535:
+        elif y_fall_prob > 0.4160:
             return 'SELL'
         else:
             return "HOLD"
@@ -274,7 +274,7 @@ class Strategy_mean_reversion(StrategyInterface):
         '''获取机器学习的预测结果'''
         price_df = info_controller.strategy_info.price_dict[symbol]
         factor_df = self.features_calculator.get_all_features_add_market_coin(price_df)
-        factor_df = factor_df[self.features_calculator.all_X_cols]
+        factor_df = factor_df[self.features_calculator.useful_X_Cols]
         y_fall_prob, y_rise_prob = self.reverse_detector.get_machine_learning_pridictions(factor_df)
         return y_fall_prob, y_rise_prob
 

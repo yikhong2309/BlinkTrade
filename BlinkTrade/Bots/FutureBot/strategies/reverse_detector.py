@@ -9,8 +9,9 @@ import pandas as pd
 import numpy as np
 import pickle
 import pandas_ta
+
 from pandas_ta.core import adx, cci, macd, rsi, obv, vwap, atr, bop, ohlc4
-from strategy_utils import co_diff_target_cols, useful_X_Cols, origin_cols, Z_cols
+from strategies.strategy_utils import co_diff_target_cols, useful_X_Cols, origin_cols, Z_cols
 
 
 
