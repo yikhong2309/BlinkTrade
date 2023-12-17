@@ -129,7 +129,7 @@ class Strategy_Info(Info_Interface):
         # 保存预测结果，用于控制时间
         self.order_info_df = pd.DataFrame(index=self.candidate_symbols )
         self.order_info_df['side'] = 'HOLD'
-        self.order_info_df['order_time'] = pd.to_datetime(time.time(), unit='s')
+        self.order_info_df['order_time'] = pd.to_datetime(time.time()-300*60, unit='s')
         return
 
 

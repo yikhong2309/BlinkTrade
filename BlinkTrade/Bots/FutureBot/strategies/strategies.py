@@ -30,7 +30,7 @@ class Strategy_mean_reversion(StrategyInterface):
         super().__init__()
         self.reverse_detector = Reverse_Detector(
             model_save_path='/home/ec2-user/BlinkTrade/BlinkTrade/Bots/FutureBot/models/',
-            model_name='rf_3class_70_30.pkl'
+            model_name='rf_3class_70_30_fulldata.pkl'
         )
         self.features_calculator = Features_Calculator()
 
@@ -133,7 +133,7 @@ class Strategy_mean_reversion(StrategyInterface):
         '''
         # 1. 判断theta
         theta = info_controller.strategy_info.exchange_info_df.loc[symbol, "theta"]
-        if np.abs(theta) > 0.7:
+        if np.abs(theta) > 0.9:
             # 结合机器学习，判断是否需要开仓
             side = self.judge_open_side(symbol, info_controller)
             if side == 'HOLD':
@@ -155,10 +155,8 @@ class Strategy_mean_reversion(StrategyInterface):
             计算买入量
             '''
             balance = info_controller.account_info.USDT_value
-            if balance > 1000:
-                quantity = 100. / price
-            elif balance > 500:
-                quantity = 50. / price
+            if balance > 200:
+                quantity = 30. / price
             else:
                 quantity = 0.
             return quantity
@@ -189,7 +187,7 @@ class Strategy_mean_reversion(StrategyInterface):
         positionAmt = info_controller.account_info.position_df.loc[symbol, "positionAmt"]
         stepDecimal = info_controller.strategy_info.exchange_info_df.loc[symbol, "quantityPrecision"]
 
-        if order.quantity < 0:
+        if positionAmt < 0:
             order.quantity = -1 * positionAmt
         else:
             order.quantity = positionAmt
@@ -203,14 +201,6 @@ class Strategy_mean_reversion(StrategyInterface):
 
         # 获取挂单价格
         order.price = info_controller.get_price_now(symbol)
-
-        try:
-            order.selfcheck()
-        except AssertionError as e:
-            logging.info('-----------------AssertionError-----------------------')
-            logging.info(f"AssertionError:{e}".format(order.symbol))
-            logging.info('------------------------------------------------------')
-            return None
 
         return order
 
@@ -237,14 +227,12 @@ class Strategy_mean_reversion(StrategyInterface):
         # 计算时间差
         time_now = pd.to_datetime(time.time(), unit='s')
         time_difference = time_now - order_time  # 是一个timedelta对象
+
         # 检查差值是否大于300分钟
         is_greater_than_300_minutes = time_difference > pd.Timedelta(minutes=300)
 
         if is_greater_than_300_minutes:  # 超过300分钟就平仓
-            if order_side == 'HOLD':
-                return False  # 说明这个平仓信号已经发出过
-            else:
-                return True
+            return True  # todo 是否存在重复平仓的情况
         else:
             return False
 
@@ -255,11 +243,11 @@ class Strategy_mean_reversion(StrategyInterface):
         '''
         y_rise_prob, y_fall_prob  = self.get_ml_prediction(symbol, info_controller)
 
-        logging.info('--------------------judge_buy---------------------------')
-        logging.info("symbol:{}".format(symbol))
-        logging.info("ml_pred:{}".format(y_fall_prob))
-        logging.info("ml_pred:{}".format(y_rise_prob))
-        logging.info('---------------------------------------------------------')
+        # logging.info('--------------------judge_buy---------------------------')
+        # logging.info("symbol:{}".format(symbol))
+        # logging.info("ml_pred:{}".format(y_fall_prob))
+        # logging.info("ml_pred:{}".format(y_rise_prob))
+        # logging.info('---------------------------------------------------------')
 
         # todo 调整合适的阈值，观察是否会有二者同时开仓的情况
         if y_rise_prob > 0.4165:

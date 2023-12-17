@@ -37,6 +37,9 @@ def create_order(trade_client, info_controller:Info_Controller, order_s: Order_S
     if not order_s.valid:
         return None
 
+    if order_s.quantity < 1:
+        return None
+
     check_order(trade_client, info_controller, order_s.symbol)
 
     params = {
@@ -49,15 +52,6 @@ def create_order(trade_client, info_controller:Info_Controller, order_s: Order_S
 
     if order_s.type == 'LIMIT':
         params['price'] = order_s.price
-
-    logging.info('---------------------------')
-    logging.info("symbol: {}".format(params['symbol']))
-    logging.info("type: {}".format(params['type']))
-    logging.info("quantity: {}".format(params['quantity']))
-    logging.info("side: {}".format(params['side']))
-    if order_s.type == 'LIMIT':
-        logging.info("price: {}".format(params['price']))
-    logging.info('---------------------------')
 
     try:
         response = trade_client.new_order(**params)
