@@ -229,9 +229,9 @@ class Strategy_mean_reversion(StrategyInterface):
         由机器学习判断交易方向
         '''
         y_rise_prob, y_fall_prob = self.get_ml_prediction(symbol, info_controller)
-        if y_rise_prob > 0.2836:
+        if y_rise_prob > 0.2459:
             return 'BUY'
-        elif y_fall_prob > 0.2764:
+        elif y_fall_prob > 0.2859:
             return 'SELL'
         else:
             return "HOLD"
