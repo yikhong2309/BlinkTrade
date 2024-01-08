@@ -6,10 +6,10 @@ from pandas_ta.core import ohlc4
 
 import sys
 sys.path.append("..")
-from BlinkTrade.Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
-from BlinkTrade.Bots.FutureBot.strategies.strategy_utils import np_round_floor
-from BlinkTrade.Bots.FutureBot.utils.trade_utils import Order_Structure
-from BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
+from BlinkTrade.BlinkTrade.Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
+from BlinkTrade.BlinkTrade.Bots.FutureBot.strategies.strategy_utils import np_round_floor
+from BlinkTrade.BlinkTrade.Bots.FutureBot.utils.trade_utils import Order_Structure
+from BlinkTrade.BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
 
 
 class StrategyInterface(object):
@@ -30,20 +30,20 @@ class Strategy_mean_reversion(StrategyInterface):
         super().__init__()
         self.reverse_detector = Reverse_Detector(
             model_save_path='/home/ec2-user/BlinkTrade/BlinkTrade/Bots/FutureBot/models/',
-            model_name='rf_3class_70_30_fulldata.pkl'
+            model_name='rf_3class_BestParams.pkl'
         )
         self.features_calculator = Features_Calculator()
 
 
     def get_theta(self, data_df):
         Boll_df = pd.DataFrame(index=data_df.index)
-        Boll_df['ohlc4'] = ohlc4(data_df['open'], data_df['high'], data_df['low'], data_df['close'])
-        Boll_df['mean_20'] = Boll_df[['ohlc4']].ewm(span=20, adjust=False).mean()
-        Boll_df['std_20'] = Boll_df[['ohlc4']].ewm(span=96, adjust=False).std()
+        Boll_df['close'] = data_df['close']
+        Boll_df['mean_20'] = Boll_df[['close']].ewm(span=20, adjust=False).mean()
+        Boll_df['std_20'] = Boll_df[['close']].ewm(span=96, adjust=False).std()
         Boll_df.dropna(inplace=True)
 
         # 计算偏离度 theta = (p - ma) / sigma
-        Boll_df['theta'] = (Boll_df['ohlc4'] - Boll_df['mean_20']) / Boll_df['std_20']
+        Boll_df['theta'] = (Boll_df['close'] - Boll_df['mean_20']) / Boll_df['std_20']
         return Boll_df['theta'].values[-1]
 
 
@@ -58,7 +58,7 @@ class Strategy_mean_reversion(StrategyInterface):
         for symbol in candidate_symbols:
             data_df = data_dict[symbol]
             theta = self.get_theta(data_df)
-            info_controller.strategy_info.exchange_info_df.loc[symbol,"theta"] = np.round(theta,4)
+            info_controller.strategy_info.exchange_info_df.loc[symbol, "theta"] = np.round(theta,4)
 
         return info_controller
 
@@ -114,7 +114,7 @@ class Strategy_mean_reversion(StrategyInterface):
         '''
         # 1. 判断是否需要止损
         unrealizedProfit = info_controller.account_info.position_df.loc[symbol, "unrealizedProfit"]
-        if unrealizedProfit < -2:  # todo 加入设置中
+        if unrealizedProfit < -5:
             order = self.get_close_order(symbol, info_controller=info_controller)
             return order
 
@@ -126,14 +126,13 @@ class Strategy_mean_reversion(StrategyInterface):
         else:
             return None
 
-
     def un_held_set_logic(self, symbol, info_controller):
         '''
         未持有的币种，进行判断是否需要开仓
         '''
         # 1. 判断theta
         theta = info_controller.strategy_info.exchange_info_df.loc[symbol, "theta"]
-        if np.abs(theta) > 0.9:
+        if np.abs(theta) > 1.4:
             # 结合机器学习，判断是否需要开仓
             side = self.judge_open_side(symbol, info_controller)
             if side == 'HOLD':
@@ -198,12 +197,9 @@ class Strategy_mean_reversion(StrategyInterface):
             order.side = 'SELL'
         elif positionAmt < 0:
             order.side = 'BUY'
-
         # 获取挂单价格
         order.price = info_controller.get_price_now(symbol)
-
         return order
-
 
     def judge_open_side(self, symbol, info_controller) -> str:
         '''
@@ -216,26 +212,17 @@ class Strategy_mean_reversion(StrategyInterface):
         side = self.get_ml_trade_derection(symbol, info_controller)
         return side
 
-
     def judge_close(self, symbol, info_controller) -> bool:
         '''
-        判断是否需要平仓
+        判断是否需平仓
+        return True or False
         '''
         order_side = info_controller.strategy_info.order_info_df.loc[symbol, 'side']
-        order_time = info_controller.strategy_info.order_info_df.loc[symbol, 'order_time']
-
-        # 计算时间差
-        time_now = pd.to_datetime(time.time(), unit='s')
-        time_difference = time_now - order_time  # 是一个timedelta对象
-
-        # 检查差值是否大于300分钟
-        is_greater_than_300_minutes = time_difference > pd.Timedelta(minutes=300)
-
-        if is_greater_than_300_minutes:  # 超过300分钟就平仓
-            return True  # todo 是否存在重复平仓的情况
+        side = self.get_ml_trade_derection(symbol, info_controller)
+        if (order_side == 'BUY' and side == 'SELL') or (order_side == 'SELL' and side == 'BUY'):
+            return True
         else:
             return False
-
 
     def get_ml_trade_derection(self, symbol, info_controller):
         '''
@@ -249,14 +236,12 @@ class Strategy_mean_reversion(StrategyInterface):
         # logging.info("ml_pred:{}".format(y_rise_prob))
         # logging.info('---------------------------------------------------------')
 
-        # todo 调整合适的阈值，观察是否会有二者同时开仓的情况
         if y_rise_prob > 0.4165:
             return 'BUY'
         elif y_fall_prob > 0.4160:
             return 'SELL'
         else:
             return "HOLD"
-
 
     def get_ml_prediction(self, symbol, info_controller):
         '''获取机器学习的预测结果'''
@@ -266,7 +251,24 @@ class Strategy_mean_reversion(StrategyInterface):
         y_fall_prob, y_rise_prob = self.reverse_detector.get_machine_learning_pridictions(factor_df)
         return y_fall_prob, y_rise_prob
 
+    def _judge_close_by_time(self, symbol, info_controller) -> bool:
+        '''
+        通过时间判断是否需要平仓，暂停使用
+        '''
+        order_side = info_controller.strategy_info.order_info_df.loc[symbol, 'side']
+        order_time = info_controller.strategy_info.order_info_df.loc[symbol, 'order_time']
 
+        # 计算时间差
+        time_now = pd.to_datetime(time.time(), unit='s')
+        time_difference = time_now - order_time  # 是一个timedelta对象
+
+        # 检查差值是否大于300分钟
+        is_greater_than_300_minutes = time_difference > pd.Timedelta(minutes=300)
+
+        if is_greater_than_300_minutes:  # 超过300分钟就平仓
+            return True
+        else:
+            return False
 
 class Hedge_Strategy(StrategyInterface):
     '''

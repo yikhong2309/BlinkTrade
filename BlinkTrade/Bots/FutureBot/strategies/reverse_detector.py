@@ -10,9 +10,6 @@ import numpy as np
 import pickle
 import pandas_ta
 
-from pandas_ta.core import adx, cci, macd, rsi, obv, vwap, atr, bop, ohlc4
-from strategies.strategy_utils import co_diff_target_cols, useful_X_Cols, origin_cols, Z_cols
-
 
 
 class Reverse_Detector(object):
@@ -30,7 +27,6 @@ class Reverse_Detector(object):
         '''
         data_df = factor_df.copy()
         y_predict = self.ml_model.predict_proba(data_df.iloc[-1:, :])
-        # todo 调试
         y_rise_prob = y_predict[0][2]
         y_fall_prob = y_predict[0][0]
         return y_rise_prob, y_fall_prob
@@ -38,11 +34,57 @@ class Reverse_Detector(object):
 
 class Features_Calculator(object):
     def __init__(self):
-        self.origin_cols = origin_cols
-        self.Z_cols = Z_cols
-        self.co_diff_target_cols = co_diff_target_cols  # 差异特征的目标列
-        self.useful_X_Cols = useful_X_Cols  # 最终使用到的因子集合
+        self.funcName_list = ['hl2', 'ohlc4', 'tema', 'rsi', 'wcp', 'cmo', 'bias', 'zlma',
+                              'hlc3', 'zscore', 'dm', 'pgo', 'midpoint', 'decreasing',
+                              'decay', 'ui', 'aroon', 'cdl_z', 'vortex', 'amat']  # pandas_ta中的函数名
+
+        self.factorName_list = ['HL2', 'OHLC4', 'TEMA_10', 'RSI_14', 'WCP', 'CMO_14', 'BIAS_SMA_26',
+                                'ZL_EMA_10', 'HLC3', 'ZS_30', 'DMN_14', 'PGO_14', 'MIDPOINT_2', 'DEC_1',
+                                'LDECAY_5', 'UI_14', 'AROOND_14', 'close_Z_30_1', 'VTXM_14', 'AMATe_SR_8_21_2']  # 因子名
+
+        # 单个币种的全部特征
+        self.X_standalone_cols = self.factorName_list  # 20个
+
+        # 交互特征  10个
+        self.co_diff_target_cols = (['DMN_14', 'ZS_30', 'CMO_14', 'RSI_14', 'UI_14', 'PGO_14',
+                                     'close_Z_30_1', 'VTXM_14', 'BIAS_SMA_26', 'AROOND_14'])  # 10个
+        self.co_diff_target_cols_btc = ['co_diff_' + x + "_btc" for x in self.co_diff_target_cols]
+        self.co_diff_target_cols_eth = ['co_diff_' + x + "_eth" for x in self.co_diff_target_cols]
+
+        # btc eth自身的特征  20*2 = 40个
+        self.btc_X_cols = [x + "_btc" for x in self.X_standalone_cols]
+        self.eth_X_cols = [x + "_eth" for x in self.X_standalone_cols]
+
+        # 所有X_cols
+        self.all_X_cols = self.X_standalone_cols + self.co_diff_target_cols_btc + self.co_diff_target_cols_eth + self.btc_X_cols + self.eth_X_cols
+        self.useful_X_Cols = self.X_standalone_cols + self.co_diff_target_cols_btc + self.co_diff_target_cols_eth  ## 目前来看更有效的特征子集
         return
+
+    def save_market_coin_data(self, data_df, coin_name):
+        '''
+        保存单个币种的数据
+        '''
+        factor_df = self.add_all_standalone_features(data_df)[self.X_standalone_cols]
+        factor_df.columns = factor_df.columns + '_' + coin_name
+        if coin_name == 'btc':
+            self.btc_factor_data = factor_df
+        elif coin_name == 'eth':
+            self.eth_factor_data = factor_df
+        return
+
+    def get_all_features_add_market_coin(self, data_df):
+        '''
+            计算全部技术指标
+            然后将该货币的指标，以及btc，eth指标进行合并
+
+            return factor_df
+        '''
+        # 1. 计算全部技术指标
+        factor_df = self.add_all_standalone_features(data_df)[self.X_standalone_cols]
+        # 2. 与保存的btc eth数据进行合并
+        factor_df = self.combine_features(factor_df, self.btc_factor_data, self.eth_factor_data)
+        factor_df = self.add_co_diff_features_market_coin(factor_df)  # 加入互相关因子
+        return factor_df[self.all_X_cols]
 
     def add_all_standalone_features(self, data_df):
         '''
@@ -51,125 +93,49 @@ class Features_Calculator(object):
             2. 原始指标的 theta 指标 （归一化）
             3. 原始指标的 diff 指标
         '''
-        raw_cols = ['open', 'high', 'low', 'close', 'volume', 'quote_volume', 'open_time']
+        raw_cols = ['open', 'high', 'low', 'close', 'quote_volume', 'open_time']
         data_df = data_df[raw_cols].copy()
-        factor_df = pd.DataFrame()
         # 1 原始指标
         ### ta 的技术指标
-        factor_df = self.add_ta_features(factor_df, data_df)
-        ### 1.1 Z_score指标
-        factor_df = self.cal_Z_score(factor_df, self.origin_cols, 20)
-        ### 1.3 diff 指标
-        factor_df = self.calculate_diff(factor_df, self.Z_cols, 2)
+        data_df = self.add_ta_features(data_df)
+        return data_df
 
-        ## 2 采样X和y
-        assert data_df.shape[0] == factor_df.shape[0]
-        factor_df['close'] = data_df['close']
-        return factor_df
-
-
-    def add_ta_features(self, factor_df, raw_df):
+    def add_ta_features(self, raw_df):
         '''
-        计算原始技术指标
-        包括：
-        trend_adx
-        trend_cci
-        macd
-        momentum_rsi
-        volume_obv
-        volume_vwap
-        volatility_atr
-        bop
-        ohlc4
-
+        计算 pandas ta 原始技术指标
         '''
-        data_df = raw_df[['open', 'close', 'high', 'low', 'volume']]
-        data_df.index = pd.to_datetime(raw_df.open_time, unit='ms')
-
-        temp_factor_df = pd.DataFrame()  # 暂存特征，避免index不一致导致的错误
-        temp_factor_df['trend_adx'] = adx(data_df['high'], data_df['low'], data_df['close'])['ADX_14']
-        temp_factor_df['trend_cci'] = cci(data_df['high'], data_df['low'], data_df['close'])
-        temp_factor_df['macd'] = macd(data_df['close'])['MACD_12_26_9']
-        temp_factor_df['momentum_rsi'] = rsi(data_df['close'])
-        temp_factor_df['volume_obv'] = obv(data_df['close'], data_df['volume'])
-        temp_factor_df['volume_vwap'] = vwap(data_df['high'], data_df['low'], data_df['close'], data_df['volume'])
-        temp_factor_df['volatility_atr'] = atr(data_df['high'], data_df['low'], data_df['close'])
-        temp_factor_df['bop'] = bop(data_df['open'], data_df['high'], data_df['low'],
-                                    data_df['close'])  # (open - close)/(high - low)
-        temp_factor_df['ohlc4'] = ohlc4(data_df['open'], data_df['high'], data_df['low'], data_df['close'])
-
-        temp_factor_df.reset_index(drop=True, inplace=True)
-        factor_df = pd.concat([factor_df, temp_factor_df], axis=1)
-        return factor_df
-
+        raw_df.rename({'quote_volume': 'volume'}, axis=1, inplace=True)
+        for indicator_func_name in self.funcName_list:  # 遍历全部所需函数，计算对应特征
+            fun = getattr(raw_df.ta, indicator_func_name)
+            temp_data = fun(append=True)
+        return raw_df
 
     def cal_Z_score(self, factor_df, column_lists, span):
         '''Z-score'''
-
         for column_name in column_lists:
             mean_20 = factor_df[column_name].ewm(span, adjust=False).mean()
             std_20 = factor_df[column_name].ewm(96, adjust=False).std()  # todo 超参数搜索
             factor_df[f'{column_name}_Z'] = (factor_df[column_name].values - mean_20) / std_20
-
         return factor_df
 
-    def calculate_diff(self, data, column_lists, span):
-        for column_name in column_lists:
-            # First order difference
-            data[f'{column_name}_diff_1'] = data[column_name] - data[column_name].shift(span)
-            # Second order difference
-            data[f'{column_name}_diff_2'] = data[f'{column_name}_diff_1'] - data[f'{column_name}_diff_1'].shift(span)
-        return data
+    def combine_features(self, factor_df, btc_data, eth_data):
+        concat_df = pd.concat([factor_df, btc_data, eth_data], axis=1)
+        return concat_df
 
-
-    def save_market_coin_data(self, data_df, coin_name):
+    def add_co_diff_features_market_coin(self, factor_df):
         '''
-        Step 1 先保存market coin data
-
+        加入互相关关系的因子，也就是coin和btc eth的差值
         '''
-        factor_df = self.add_all_standalone_features(data_df)
-        factor_df.columns = factor_df.columns + '_' + coin_name
-        if coin_name == 'btc':
-            self.btc_factor_data = factor_df
-        elif coin_name == 'eth':
-            self.eth_factor_data = factor_df
-        return
-
-
-    def get_all_features_add_market_coin(self, data_df):
-        '''
-            Setp 2 全部计算
-            计算全部技术指标
-            然后将该货币的指标，以及btc，eth指标进行合并
-
-            return factor_df
-        '''
-
-        def combine_features( factor_df, btc_data, eth_data):
-            concat_df = pd.concat([factor_df, btc_data, eth_data], axis=1)
-            return concat_df
-
-        def add_co_diff_features_market_coin(factor_df):
-            '''
-            加入互相关关系的因子，也就是coin和btc eth的差值
-            Step3 加入互相关因子
-            '''
-            for feature_name in self.co_diff_target_cols:
-                factor_df['co_diff_' + feature_name + "_btc"] = factor_df[feature_name] - factor_df[
-                    feature_name + "_btc"]
-                factor_df['co_diff_' + feature_name + "_eth"] = factor_df[feature_name] - factor_df[
-                    feature_name + "_eth"]
-            return factor_df
-
-        factor_df = self.add_all_standalone_features(data_df)
-        factor_df = combine_features(factor_df, self.btc_factor_data, self.eth_factor_data)  # 合并
-        factor_df = add_co_diff_features_market_coin(factor_df)  # 加入互相关因子
-        return factor_df[self.useful_X_Cols]
+        co_diff_target_cols = self.co_diff_target_cols
+        for feature_name in co_diff_target_cols:
+            factor_df['co_diff_' + feature_name + "_btc"] = factor_df[feature_name] - factor_df[feature_name + "_btc"]
+            factor_df['co_diff_' + feature_name + "_eth"] = factor_df[feature_name] - factor_df[feature_name + "_eth"]
+        return factor_df
 
 
 
 if __name__ == '__main__':
-    from Bots.FutureBot.utils.data_utils import get_market_prices
+    from BlinkTrade.BlinkTrade.Bots.SpotBot.utils.data_utils import get_market_prices
 
     btc_price_df = get_market_prices('BTCUSDT', '15m')
     eth_price_df = get_market_prices('ETHUSDT', '15m')

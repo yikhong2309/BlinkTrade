@@ -3,7 +3,7 @@ import numpy as np
 import logging
 # sys.path.append("../")
 
-from Bots.SpotBot.utils.trade_utils import Order_Structure
+from BlinkTrade.BlinkTrade.Bots.SpotBot.utils.trade_utils import Order_Structure
 from . import reverse_detector
 from . import strategy_utils
 
