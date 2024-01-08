@@ -93,7 +93,7 @@ class Features_Calculator(object):
             2. 原始指标的 theta 指标 （归一化）
             3. 原始指标的 diff 指标
         '''
-        raw_cols = ['open', 'high', 'low', 'close', 'quote_volume', 'open_time']
+        raw_cols = ['open', 'high', 'low', 'close', 'quote_volume']
         data_df = data_df[raw_cols].copy()
         # 1 原始指标
         ### ta 的技术指标
@@ -135,12 +135,12 @@ class Features_Calculator(object):
 
 
 if __name__ == '__main__':
-    from BlinkTrade.BlinkTrade.Bots.SpotBot.utils.data_utils import get_market_prices
+    from BlinkTrade.Bots.SpotBot.utils.data_utils import get_market_prices
 
     btc_price_df = get_market_prices('BTCUSDT', '15m')
     eth_price_df = get_market_prices('ETHUSDT', '15m')
 
-    print(btc_price_df.head())
+    # print(btc_price_df.head())
     f_c = Features_Calculator()
 
     f_c.save_market_coin_data(btc_price_df, coin_name='btc' )
@@ -148,17 +148,17 @@ if __name__ == '__main__':
 
     price_df = get_market_prices('AXSUSDT', '15m')
 
-    factor_df = f_c.get_all_features_add_market_coin(price_df)[f_c.useful_X_Cols]
+    factor_df = f_c.get_all_features_add_market_coin(price_df)[f_c.all_X_cols]
 
-    print(factor_df.head())
+    # print(factor_df.head())
 
-
+    print(factor_df.iloc[-1:, :])
     # # 测试预测部分
     model_save_path = '../models/'
-    model_name = 'rf_3class_70_30.pkl'
+    model_name = 'rf_3class_BestParams.pkl'
     r_d = Reverse_Detector(model_save_path, model_name)
     y_rise_prob, y_fall_prob = r_d.get_machine_learning_pridictions(factor_df)
 
-    print(factor_df.iloc[-1:, :])
+
     print('y_rise_prob: ', y_rise_prob)
     print('y_fall_prob: ', y_fall_prob)

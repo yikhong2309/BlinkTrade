@@ -6,10 +6,10 @@ from pandas_ta.core import ohlc4
 
 import sys
 sys.path.append("..")
-from BlinkTrade.BlinkTrade.Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
-from BlinkTrade.BlinkTrade.Bots.FutureBot.strategies.strategy_utils import np_round_floor
-from BlinkTrade.BlinkTrade.Bots.FutureBot.utils.trade_utils import Order_Structure
-from BlinkTrade.BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
+from BlinkTrade.Bots.FutureBot.strategies.reverse_detector import Reverse_Detector, Features_Calculator
+from BlinkTrade.Bots.FutureBot.strategies.strategy_utils import np_round_floor
+from BlinkTrade.Bots.FutureBot.utils.trade_utils import Order_Structure
+from BlinkTrade.Bots.FutureBot.utils.information import Info_Controller
 
 
 class StrategyInterface(object):
@@ -218,8 +218,8 @@ class Strategy_mean_reversion(StrategyInterface):
         return True or False
         '''
         order_side = info_controller.strategy_info.order_info_df.loc[symbol, 'side']
-        side = self.get_ml_trade_derection(symbol, info_controller)
-        if (order_side == 'BUY' and side == 'SELL') or (order_side == 'SELL' and side == 'BUY'):
+        pred_side = self.get_ml_trade_derection(symbol, info_controller)
+        if (order_side == 'BUY' and pred_side == 'SELL') or (order_side == 'SELL' and pred_side == 'BUY'):
             return True
         else:
             return False
@@ -228,17 +228,10 @@ class Strategy_mean_reversion(StrategyInterface):
         '''
         由机器学习判断交易方向
         '''
-        y_rise_prob, y_fall_prob  = self.get_ml_prediction(symbol, info_controller)
-
-        # logging.info('--------------------judge_buy---------------------------')
-        # logging.info("symbol:{}".format(symbol))
-        # logging.info("ml_pred:{}".format(y_fall_prob))
-        # logging.info("ml_pred:{}".format(y_rise_prob))
-        # logging.info('---------------------------------------------------------')
-
-        if y_rise_prob > 0.4165:
+        y_rise_prob, y_fall_prob = self.get_ml_prediction(symbol, info_controller)
+        if y_rise_prob > 0.2836:
             return 'BUY'
-        elif y_fall_prob > 0.4160:
+        elif y_fall_prob > 0.2764:
             return 'SELL'
         else:
             return "HOLD"
@@ -247,7 +240,7 @@ class Strategy_mean_reversion(StrategyInterface):
         '''获取机器学习的预测结果'''
         price_df = info_controller.strategy_info.price_dict[symbol]
         factor_df = self.features_calculator.get_all_features_add_market_coin(price_df)
-        factor_df = factor_df[self.features_calculator.useful_X_Cols]
+        factor_df = factor_df[self.features_calculator.all_X_cols]
         y_fall_prob, y_rise_prob = self.reverse_detector.get_machine_learning_pridictions(factor_df)
         return y_fall_prob, y_rise_prob
 
@@ -269,6 +262,7 @@ class Strategy_mean_reversion(StrategyInterface):
             return True
         else:
             return False
+
 
 class Hedge_Strategy(StrategyInterface):
     '''

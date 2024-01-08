@@ -77,7 +77,7 @@ def check_order(trade_client, info_controller, symbol):
     2. 检查杠杆率是否正常
     3. margin 类应该型是isolated
     '''
-    if info_controller.account_info.position_df.loc[symbol, 'leverage'] != 5:
+    if info_controller.account_info.position_df.loc[symbol, 'leverage'] != 1:
         change_leverage(trade_client, symbol)
     if info_controller.account_info.position_df.loc[symbol, 'isolated'] != True:
         change_margin_type(trade_client, symbol)
@@ -87,7 +87,7 @@ def change_leverage(trade_client, symbol):
     '''调整杠杆率'''
     try:
         response = trade_client.change_leverage(
-            symbol=symbol, leverage=5, recvWindow=6000
+            symbol=symbol, leverage=1, recvWindow=6000
         )
         logging.info(response)
     except ClientError as error:

@@ -43,17 +43,13 @@ def run_trade(config_dict, info_controller, strategy, api_url=None):
         interval = "15m"
         prices_df = get_market_prices(symbol, interval)  # pd最下的是最新价格
         price_dict[symbol] = prices_df  # 保存全部candidate的价格信息
-
     info_controller.strategy_info.update_price_dict(price_dict)  # 更新价格信息
-
     # 3. Trade or standby
     order_s_list = strategy.get_order_list(info_controller, target_position=config_dict["fraction"])
-
     for order_s in order_s_list:
         if order_s:
             order_id = create_order(client, info_controller, order_s)
             print(order_id)
-
     return
 
 
@@ -63,9 +59,7 @@ def before_start(config_dict, api_url=None):
     会自动修改config_dict的内容
     '''
     # 1. 初始化config_dict
-
     client = UMFutures(key=g_api_key, secret=g_secret_key)
-
     # 1. 初始化infoController
     for i in range(5):
         try:
@@ -147,11 +141,11 @@ if __name__ == "__main__":
 
     while True:
         logging.info('开始执行')
-        # try:
-        # time.sleep(2.)
+    #     try:
+        time.sleep(2.)
         run_trade(config_dict, info_controller, strategy )
         logging.info("执行完毕")
-        time.sleep(10.)
+        time.sleep(321.)
         # except:
         #     config_dict, my_spot_account_s, strategy = before_start(config_dict)
         #     continue
