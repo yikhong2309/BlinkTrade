@@ -42,7 +42,7 @@ def create_order(info_controller, trade_client, order_s:Order_Structure):
     }
 
     try:
-        if side == 'BUY':
+        if side == 'buy':
 
             # Extracting Price dictionary from Binance
             price_dict = info_controller.strategy_info.price_dict
@@ -54,7 +54,7 @@ def create_order(info_controller, trade_client, order_s:Order_Structure):
             # Renew each position cost
             info_controller.account_info.position_df.loc[symbol, "bid_price"] = price_dict[symbol]['close'].values[-1]
             
-        elif side == 'SELL':
+        elif side == 'sell':
 
             # Sell amount
             params["quantity"] = amount
@@ -63,7 +63,7 @@ def create_order(info_controller, trade_client, order_s:Order_Structure):
             # Renew each position cost
             info_controller.account_info.position_df.loc[symbol, "bid_price"] = 0
 
-        elif side == 'HOLD':
+        elif side == 'hold':
             response = None
 
         logging.info(response)
