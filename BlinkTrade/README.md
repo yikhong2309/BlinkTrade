@@ -2,10 +2,10 @@
 > A project for algorithmic trading of cryptocurrencies.
 
 # Introduction 
-Further tuning to achieve consistent profit！#Kudos to my dear friend, Miao Yu Heng and his amazing ML models
+Further tuning to achieve consistent profit！#Kudos to my dear friend/QR genius, Miao Yu Heng and his amazing ML models
 
 
-# Strcuture
+# Structure
 Does such a simple project really need an introduction to the file structure?
 - [Bot](#Bot) - Relevant code and information about trading strategies and the bot are still being written...
   - models
@@ -16,7 +16,7 @@ Does such a simple project really need an introduction to the file structure?
   - utils
     - data_utils.py
     - information.py
-    - trade_utils.py  - Utility functions for placing orders.(
+    - trade_utils.py  - Utility functions for placing orders.
   - run_trade.py - Main program to run the overall trading bot, calling various trading strategy classes.
 
 
