@@ -102,16 +102,16 @@ if __name__ == "__main__":
     util_config = dict(
         candidate_symbols= ['TRBUSDT', 'CREAMUSDT', 'QNTUSDT', 'MLNUSDT', 'KP3RUSDT', 'AAVEUSDT', 
         'ALCXUSDT', 'GMXUSDT', 'COMPUSDT', 'LTCUSDT', 'EGLDUSDT', 'AUCTIONUSDT', 'ZECUSDT', 'LINKUSDT', 
-        'DASHUSDT', 'ANTUSDT', 'FXSUSDT', 'SOLUSDT', 'APTUSDT', 'SSVUSDT', 'UNFIUSDT', 'MOVRUSDT', 
-        'MULTIUSDT', 'WINGUSDT', 'NEOUSDT', 'XVSUSDT', 'INJUSDT', 'ETCUSDT', 'CVXUSDT', 'AVAXUSDT', 
+        'DASHUSDT', 'FXSUSDT', 'SOLUSDT', 'APTUSDT', 'SSVUSDT', 'UNFIUSDT', 'MOVRUSDT', 
+        'WINGUSDT', 'NEOUSDT', 'XVSUSDT', 'INJUSDT', 'ETCUSDT', 'CVXUSDT', 'AVAXUSDT', 
         'OGUSDT', 'AXSUSDT', 'LPTUSDT', 'WLDUSDT', 'FTTUSDT', 'ATOMUSDT', 'CYBERUSDT', 'SNXUSDT', 
         'FORTHUSDT', 'MASKUSDT', 'FRONTUSDT', 'PYRUSDT', 'RNDRUSDT', 'ARKUSDT', 'BONDUSDT', 'GLMRUSDT', 
         'KNCUSDT', 'UNIUSDT', 'LUNAUSDT', 'AGLDUSDT', 'MTLUSDT', 'RUNEUSDT', 'HIFIUSDT', 'ICPUSDT', 
         'STORJUSDT', 'BELUSDT', 'FILUSDT', 'IMXUSDT', 'DOTUSDT', 'CRVUSDT', 'LQTYUSDT', 'WAVESUSDT', 
-        'TOMOUSDT', 'MCUSDT', 'HIGHUSDT', 'GALUSDT', 'API3USDT', 'OPUSDT', 'DYDXUSDT', 'FISUSDT', 
+        'HIGHUSDT', 'GALUSDT', 'API3USDT', 'OPUSDT', 'DYDXUSDT', 'FISUSDT', 
         'HOOKUSDT', 'FLMUSDT', 'COMBOUSDT', 'PENDLEUSDT', 'THETAUSDT', 'PHBUSDT', 'NEARUSDT', 
-        'LOOMUSDT', 'SUSHIUSDT', 'LDOUSDT', 'GTCUSDT', 'WTCUSDT', 'ARBUSDT', 'PNTUSDT', 'MAGICUSDT', 
-        'POLSUSDT', 'EDUUSDT', 'CELOUSDT', 'BURGERUSDT', 
+        'LOOMUSDT', 'SUSHIUSDT', 'LDOUSDT', 'GTCUSDT', 'ARBUSDT', 'PNTUSDT', 'MAGICUSDT', 
+        'POLSUSDT', 'EDUUSDT', 'CELOUSDT', 'BURGERUSDT', 'DOGEUSDT', 'HBARUSDT', 'RONINUSDT',
         'SXPUSDT', 'ARKMUSDT', 'APEUSDT', 'BLZUSDT', 'YGGUSDT', 'LITUSDT', 'EOSUSDT', 'CAKEUSDT', 
         'PROSUSDT', 'STGUSDT', 'STXUSDT', 'PERPUSDT', 'PHAUSDT', 'RDNTUSDT', 'XRPUSDT', 'STPTUSDT', 
         'DREPUSDT', 'MAVUSDT', 'ONTUSDT', 'OCEANUSDT', 'ELFUSDT', 'OAXUSDT', 'MATICUSDT', 'SYNUSDT', 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
         'FLOWUSDT', 'FIDAUSDT', 'EURUSDT', 'ZRXUSDT', 'HARDUSDT', 'SEIUSDT', 'ALGOUSDT', 'MANAUSDT', 
         'SANDUSDT', 'JOEUSDT', 'BSWUSDT', 'ATAUSDT', 'BAKEUSDT', 'QUICKUSDT', 'IDUSDT', 'AGIXUSDT', 
         'CFXUSDT', 'KLAYUSDT', 'DUSKUSDT', 'DARUSDT', 'OGNUSDT', 'GMTUSDT', 'ASTRUSDT', 'XLMUSDT', 
-        'TRUUSDT', 'WOOUSDT', 'ACAUSDT', 'FTMUSDT', 'ADAUSDT'],
+        'TRUUSDT', 'WOOUSDT', 'ACAUSDT', 'FTMUSDT', 'ADAUSDT', 'GRTUSDT', 'CHZUSDT', 'PYTHUSDT', 'JUPUSDT' ],
 
         quote_currency='usdt',
     )
@@ -141,18 +141,17 @@ if __name__ == "__main__":
                 "https://api3.binance.com",
                 "https://api4.binance.com"]
     
-    api_url = API_urls[0]  # Initialized api_url
+    api_url = API_urls[2]  # Initialized api_url
     config_dict, info_controller, strategy = before_start(config_dict, api_url)
 
     while True:
         i = 0
         #try:
-
         api_url = API_urls[i%6]
         time.sleep(1.)
         run_trade(config_dict, info_controller, strategy, api_url)
         print("执行完毕")
-        time.sleep(480.)
+        time.sleep(10.)
             
         #except:
         #    api_url = API_urls[i%6]
